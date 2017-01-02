@@ -6,3 +6,4 @@ docs/
 !docs/capstone.pdf
 **/__pycache__
 **/*.pem
+**/*.py[cod]
