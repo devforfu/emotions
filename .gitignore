@@ -1,0 +1,8 @@
+.*
+!.gitignore
+data/
+!data/README.md
+docs/
+!docs/capstone.pdf
+**/__pycache__
+**/*.pem
