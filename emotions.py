@@ -2,15 +2,69 @@ import tempfile
 import weakref
 import zipfile
 import tarfile
+import shelve
 import shutil
 import os
 import io
 
+import binhex
+
+from sklearn.model_selection import KFold, StratifiedKFold
 import pandas as pd
 import numpy as np
 import requests
 
 from basedir import data, DATA_FOLDER
+
+
+RANDOM_STATE = 1
+
+
+def dump(X, y, prefix='fold', output_dir='.', folds=None, stratified=True,
+         **fold_kwargs):
+    """Dumps dataframe into file.
+
+    Parameters
+    ----------
+    folds: int, or None, default: None
+        If integer value provided, then data will be saved into this number
+        of files each one with equal number of records (except maybe the last
+        chunk).
+
+    stratified: bool, default: False
+        If True, then `sklearn.StratifiedKFold` is used to split dataset into
+        chunks, otherwise - `sklearn.KFold`.
+
+    """
+    if folds:
+        fold_factory = [KFold, StratifiedKFold][stratified]
+        try:
+            n_splits = int(folds)
+        except ValueError:
+            n_splits = 3
+        fold_kwargs['n_splits'] = n_splits
+        fold = fold_factory(**fold_kwargs)
+
+        template = '%s_{0}_{1:0%d}' % (prefix, len(str(abs(n_splits))))
+        if output_dir:
+            template = os.path.join(output_dir, template)
+
+        splits = []
+        for i, (_, subset) in enumerate(fold.split(X, y)):
+            X_subset, y_subset = X[subset], y[subset]
+            np.save(template.format('X', i), X_subset)
+            np.save(template.format('y', i), y_subset)
+            splits.append((i, subset))
+
+        meta = os.path.join(os.path.dirname(template), 'split.txt')
+        with open(meta, 'w') as fp:
+            lines = ['%d::%s\n' % (i, ','.join(map(str, fold)))
+                     for i, fold in splits]
+            fp.writelines(lines)
+
+    else:
+        np.save(prefix + '_X', X)
+        np.save(prefix + '_y', y)
 
 
 class Dataset:
@@ -46,13 +100,18 @@ class Dataset:
 
     def __init__(self, name, dataset_folder=None, cache=True):
         self.name = name
-        self.dataset_folder = dataset_folder
+        self.dataset_folder = os.path.expanduser(dataset_folder)
         self.cache = cache
         self._dataset = None
+        self._prepared = None
 
     @property
     def content(self):
         return self._dataset
+
+    @property
+    def prepared(self):
+        return self._prepared
 
     @property
     def cache_log(self):
@@ -173,7 +232,6 @@ class FER2013Dataset(Dataset):
 
     def __init__(self, name, dataset_folder='.', cache=True):
         super(FER2013Dataset, self).__init__(name, dataset_folder, cache)
-        self.prepared = None
 
     @classmethod
     def get_name(cls):
@@ -203,36 +261,44 @@ class FER2013Dataset(Dataset):
 
         processed_data = pd.DataFrame(
             pd.concat([labels, verbose, usage, flat_images], axis=1))
-        self.prepared = processed_data
+        self._prepared = processed_data
+
+    @staticmethod
+    def label_to_verbose(label):
+        try:
+            return FER2013Dataset.VERBOSE_EMOTION[label]
+        except (LookupError, TypeError):
+            raise ValueError("Wrong emotion label: '%d'" % label)
 
 
 Dataset.register('fer2013', FER2013Dataset)
 
 
-def main():
+def prepare_emotions_dataset(url, filepath=None, split_data=True):
     loader = Dataset('fer2013', dataset_folder=DATA_FOLDER)
 
-    # remove files
-    zip_link = 'https://www.dropbox.com/s/s982kppa2j804tb/demo.zip?dl=1'
-    tar_link = 'https://www.dropbox.com/s/2y4dx954ycngi6k/demo.tar.gz?dl=1'
-    file_link = 'https://www.dropbox.com/s/q1q103nlr7q3r0b/demo.csv?dl=1'
+    loader.load_from_url(url, archive=True, name_in_archive=filepath)
+    print('FER2013 dataset (raw):')
+    print(loader.content.head())
 
-    # .. first time download
-    loader.load_from_url(zip_link, archive=True, name_in_archive='demo.csv')
-    loader.load_from_url(tar_link, archive=True, name_in_archive='demo.csv')
-    loader.load_from_url(file_link)
+    loader.prepare()
+    print('FER2013 dataset (prepared):')
+    print(loader.prepared.head())
 
-    # .. restore from cache
-    loader.load_from_url(zip_link, archive=True, name_in_archive='demo.csv')
-    loader.load_from_url(tar_link, archive=True, name_in_archive='demo.csv')
-    loader.load_from_url(file_link)
+    if split_data:
+        df = loader.prepared
+        X = df.drop(['label', 'verbose', 'subset'], axis=1).values
+        y = df['label'].values
 
-    # local files
-    zip_file = data('demo.zip')
-    csv_file = data('demo.csv')
+        split_config = {'shuffle': True, 'random_state': RANDOM_STATE}
+        dump(X, y, prefix='emotions', output_dir='data',
+             folds=10, stratified=True, **split_config)
 
-    loader.load_from_archive(zip_file, 'demo.csv')
-    loader.load_from_file(csv_file)
+
+def main():
+    url = 'https://www.dropbox.com/s/jrivrub0ii16s4h/fer2013.tar.gz?dl=1'
+    filepath = 'fer2013/fer2013.csv'
+    prepare_emotions_dataset(url, filepath)
 
 
 if __name__ == '__main__':
