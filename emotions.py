@@ -1,20 +1,19 @@
 import tempfile
+import doctest
 import weakref
 import zipfile
 import tarfile
-import shelve
 import shutil
+import glob
 import os
 import io
-
-import binhex
 
 from sklearn.model_selection import KFold, StratifiedKFold
 import pandas as pd
 import numpy as np
 import requests
 
-from basedir import data, DATA_FOLDER
+from basedir import DATA_FOLDER
 
 
 RANDOM_STATE = 1
@@ -65,6 +64,33 @@ def dump(X, y, prefix='fold', output_dir='.', folds=None, stratified=True,
     else:
         np.save(prefix + '_X', X)
         np.save(prefix + '_y', y)
+
+
+def load(data_folder, prefix, subset_index=None):
+    """Loads data chunk saved with `dump()` function.
+
+    Examples
+    --------
+    >>> X, y = load(DATA_FOLDER, 'emotions', subset_index=1)
+    >>> X.shape[0] == y.shape[0]
+    True
+
+    """
+    assert os.path.exists(data_folder), 'Data folder not found'
+    filenames = list(glob.glob1(data_folder, '*.npy'))
+    assert len(filenames) > 0, 'No dumped data files found'
+    pad = len(filenames[0].split('_')[-1].strip('.npy'))
+
+    if subset_index is not None:
+        assert 0 <= subset_index < len(filenames), 'Wrong subset index'
+        template = '{0}_{1}_{2:0%d}.npy' % pad
+    else:
+        template = '{0}_{1}.npy'
+    for suffix in ('X', 'y'):
+        filename = template.format(prefix, suffix, subset_index)
+        filepath = os.path.join(data_folder, filename)
+        assert os.path.exists(filepath), 'File not found: %s' % filepath
+        yield np.load(filepath)
 
 
 class Dataset:
@@ -274,32 +300,5 @@ class FER2013Dataset(Dataset):
 Dataset.register('fer2013', FER2013Dataset)
 
 
-def prepare_emotions_dataset(url, filepath=None, split_data=True):
-    loader = Dataset('fer2013', dataset_folder=DATA_FOLDER)
-
-    loader.load_from_url(url, archive=True, name_in_archive=filepath)
-    print('FER2013 dataset (raw):')
-    print(loader.content.head())
-
-    loader.prepare()
-    print('FER2013 dataset (prepared):')
-    print(loader.prepared.head())
-
-    if split_data:
-        df = loader.prepared
-        X = df.drop(['label', 'verbose', 'subset'], axis=1).values
-        y = df['label'].values
-
-        split_config = {'shuffle': True, 'random_state': RANDOM_STATE}
-        dump(X, y, prefix='emotions', output_dir='data',
-             folds=10, stratified=True, **split_config)
-
-
-def main():
-    url = 'https://www.dropbox.com/s/jrivrub0ii16s4h/fer2013.tar.gz?dl=1'
-    filepath = 'fer2013/fer2013.csv'
-    prepare_emotions_dataset(url, filepath)
-
-
 if __name__ == '__main__':
-    main()
+    doctest.testmod()

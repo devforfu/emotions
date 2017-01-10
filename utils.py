@@ -1,8 +1,9 @@
-import random
 from itertools import chain
+import random
+import os
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def sample_images(data, img_size, nrow=3, ncol=3):
@@ -20,6 +21,10 @@ def sample_images(data, img_size, nrow=3, ncol=3):
         ax.set_yticks([])
         indicies.append(index)
     return fig, indicies
+
+
+def padsize(index):
+    return len(str(abs(index)))
 
 
 def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
