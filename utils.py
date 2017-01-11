@@ -29,6 +29,18 @@ def padsize(index):
     return len(str(abs(index)))
 
 
+def save_model(model, folder, name):
+    from sklearn.externals import joblib
+    filename = os.path.join(folder, name)
+    joblib.dump(model, filename)
+
+
+def load_model(folder, name):
+    from sklearn.externals import joblib
+    filename = os.path.join(folder, name)
+    return joblib.load(filename)
+    
+
 class Timer:
     """Simple util to measure execution time.
 
