@@ -2,7 +2,6 @@ from timeit import default_timer
 from itertools import chain
 import random
 import time
-import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -151,3 +150,31 @@ def plot_learning_curve(estimator, title, X, y, ylim=None, cv=None,
     ax.legend(loc="best")
 
     return fig
+
+
+def plot_roc_curve(y_true, y_pred, pos_label=None, verbose_label='',
+                   show_diagonal=True, color='darkorange', ax=None):
+    """
+    >>> plot_roc_curve(1, 2)
+    """
+    from sklearn.metrics import roc_curve, auc
+
+    fpr, tpr, _ = roc_curve(y_true, y_pred, pos_label=pos_label)
+    area = auc(fpr, tpr)
+
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(14, 10))
+    if pos_label:
+        verbose = verbose_label or str(pos_label)
+        legend_label = '%s (area=%s)' % (verbose, area)
+    else:
+        legend_label = 'ROC curve (area=%s)' % area
+    ax.plot(fpr, tpr, color=color, lw=2, label=legend_label)
+    ax.set_xlim([0.0, 1.0])
+    ax.set_ylim([0.0, 1.0])
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    if show_diagonal:
+        ax.plot([0, 1], [0, 1], color='darkgray', lw=2, linestyle='--')
+    ax.legend(loc='lower right')
+    return ax.get_figure()
