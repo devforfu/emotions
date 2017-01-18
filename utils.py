@@ -154,7 +154,7 @@ def plot_roc_curve(y_true, y_pred, pos_label=None, verbose_label='',
         fig, ax = plt.subplots(figsize=(14, 10))
     if pos_label:
         verbose = verbose_label or str(pos_label)
-        legend_label = '%s (area=%s)' % (verbose, area)
+        legend_label = '%s (area=%2.2f)' % (verbose, area)
     else:
         legend_label = 'ROC curve (area=%s)' % area
     ax.plot(fpr, tpr, color=color, lw=2, label=legend_label)

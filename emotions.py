@@ -1,3 +1,4 @@
+from itertools import islice
 import tempfile
 import doctest
 import weakref
@@ -91,6 +92,48 @@ def load(data_folder, prefix, subset_index=None):
         filepath = os.path.join(data_folder, filename)
         assert os.path.exists(filepath), 'File not found: %s' % filepath
         yield np.load(filepath)
+
+
+def load_all(data_folder, prefix, head=None):
+    """Loads all data chunks (i.e. the full dataset) from specific folder.
+
+    Examples
+    --------
+    >>> X_all, y_all = load_all(DATA_FOLDER, 'emotions')
+    >>> Xs, ys = [], []
+    >>> for i in range(10):
+    ...     X_chunk, y_chunk = load(DATA_FOLDER, 'emotions', subset_index=i)
+    ...     Xs.append(X_chunk)
+    ...     ys.append(y_chunk)
+    ...
+    >>> X_all.shape == np.concatenate(Xs).shape
+    True
+    >>> y_all.shape == np.concatenate(ys).shape
+    True
+    >>> X_first, y_first = load_all(DATA_FOLDER, 'emotions', head=1)
+    >>> X_single, y_single = load(DATA_FOLDER, 'emotions', subset_index=0)
+    >>> X_first.shape == X_single.shape
+    True
+    >>> y_first.shape == y_single.shape
+    True
+
+    """
+    x_files = glob.glob1(data_folder, '%s_X_*.npy' % prefix)
+    y_files = glob.glob1(data_folder, '%s_y_*.npy' % prefix)
+
+    if head:
+        x_files = islice(x_files, 0, head)
+        y_files = islice(y_files, 0, head)
+
+    xs, ys = [], []
+
+    for x_file, y_file in zip(x_files, y_files):
+        x_filepath = os.path.join(DATA_FOLDER, x_file)
+        xs.append(np.load(x_filepath))
+        y_filepath = os.path.join(DATA_FOLDER, y_file)
+        ys.append(np.load(y_filepath))
+
+    return np.concatenate(xs), np.concatenate(ys)
 
 
 class Dataset:
