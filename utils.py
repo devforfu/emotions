@@ -2,6 +2,7 @@ from timeit import default_timer
 from itertools import chain
 import random
 import time
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -164,7 +165,7 @@ def plot_roc_curve(y_true, y_pred, pos_label=None, verbose_label='',
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(14, 10))
-    if pos_label:
+    if pos_label is not None:
         verbose = verbose_label or str(pos_label)
         legend_label = '%s (area=%s)' % (verbose, area)
     else:
