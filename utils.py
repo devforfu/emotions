@@ -2,6 +2,7 @@ from timeit import default_timer
 from itertools import chain
 import random
 import time
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,6 +28,18 @@ def sample_images(data, img_size, nrow=3, ncol=3):
 def padsize(index):
     return len(str(abs(index)))
 
+
+def save_model(model, folder, name):
+    from sklearn.externals import joblib
+    filename = os.path.join(folder, name)
+    joblib.dump(model, filename)
+
+
+def load_model(folder, name):
+    from sklearn.externals import joblib
+    filename = os.path.join(folder, name)
+    return joblib.load(filename)
+    
 
 class Timer:
     """Simple util to measure execution time.
@@ -152,7 +165,7 @@ def plot_roc_curve(y_true, y_pred, pos_label=None, verbose_label='',
 
     if ax is None:
         fig, ax = plt.subplots(figsize=(14, 10))
-    if pos_label:
+    if pos_label is not None:
         verbose = verbose_label or str(pos_label)
         legend_label = '%s (area=%2.2f)' % (verbose, area)
     else:
