@@ -8,5 +8,4 @@ docs/
 **/*.pem
 **/*.py[cod]
 docker/
-bin/
 Dockerfile
