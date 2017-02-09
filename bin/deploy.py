@@ -43,7 +43,7 @@ def main():
         with open(filename) as fp:
             content = [l.strip('\n') for l in fp.readlines() if l != '\n']
         new_lines = [
-            "c.NotebookApp.certifile=u'/root/certs/jupyter.pem'",
+            "c.NotebookApp.certfile=u'/root/certs/jupyter.pem'",
             "c.NotebookApp.keyfile=u'/root/certs/jupyter.key'",
             "c.NotebookApp.ip = '*'",
             "c.NotebookApp.password = u'%s'" % PASSWORD_HASH,
