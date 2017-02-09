@@ -66,7 +66,8 @@ class DummyModel(DeepModel):
 @deep_model('simple')
 class SimpleFeedforwardModel(DeepModel):
 
-    def build(self, init='normal', activation='relu',
+    def build(self, init='normal', optimizer='adam', activation='relu',
+
               output_activation='sigmoid'):
 
         model = Sequential()
@@ -81,31 +82,23 @@ class SimpleFeedforwardModel(DeepModel):
         return model
 
 
-@deep_model('dropout_const')
+@deep_model('dropout')
 class DropoutFeedforwardModel(DeepModel):
 
-    def build(self, init='normal', activation='relu',
+    def build(self, init='normal', optimizer='adam', activation='relu',
               output_activation='sigmoid', dropout=0.2):
 
         model = Sequential()
-        model.add(Dense(self.n_pixels,
-                        input_dim=self.n_pixels,
-                        activation=activation,
-                        init=init))
-
-        one_third_more = int(self.n_pixels * 1.3)
-        twice_more = self.n_pixels * 2
-
-        model.add(Dense(one_third_more, init=init, activation=activation))
+        model.add(Dense(self.n_pixels, input_dim=self.n_pixels, init=init))
+        model.add(Activation(activation))
+        model.add(Dense(self.n_pixels * 2, init=init))
+        model.add(Activation(activation))
         model.add(Dropout(dropout))
-        model.add(Dense(one_third_more, init=init, activation=activation))
-        model.add(Dropout(dropout))
-        model.add(Dense(twice_more, init=init, activation=activation))
+        model.add(Dense(self.n_pixels * 4, init=init))
+        model.add(Activation(activation))
         model.add(Dropout(dropout))
         model.add(Dense(self.n_classes, init=init))
         model.add(Activation(output_activation))
         self.model = model
 
         return model
-
-
