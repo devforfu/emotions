@@ -7,18 +7,24 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+from emotions import FER2013Dataset
 
-def sample_images(data, img_size, nrow=3, ncol=3):
+
+def sample_images(X, y, nrow=3, ncol=3):
     """Utility function used to visually verify that dataset wasn't malformed
     due to various transformations and normalization techniques.
     """
-    rows, columns = data.shape
-    fig, axes = plt.subplots(nrow, ncol)
+    rows, columns = X.shape
+    fig, axes = plt.subplots(
+        nrow, ncol, gridspec_kw={'hspace': 0.5, 'wspace': 0.1})
+
     indicies = []
     for ax in chain(*axes):
         index = random.randint(0, rows)
-        img = data[index, :].reshape(48, 48)
+        img = X[index, :].reshape(48, 48)
+        emotion = FER2013Dataset.VERBOSE_EMOTION[y[index]]
         ax.imshow(img, cmap=plt.get_cmap('gray'))
+        ax.set_title(emotion)
         ax.set_xticks([])
         ax.set_yticks([])
         indicies.append(index)
@@ -167,7 +173,7 @@ def plot_roc_curve(y_true, y_pred, pos_label=None, verbose_label='',
         fig, ax = plt.subplots(figsize=(14, 10))
     if pos_label is not None:
         verbose = verbose_label or str(pos_label)
-        legend_label = '%s (area=%s)' % (verbose, area)
+        legend_label = '%s (area=%2.2f)' % (verbose, area)
     else:
         legend_label = 'ROC curve (area=%s)' % area
     ax.plot(fpr, tpr, color=color, lw=2, label=legend_label)
@@ -179,3 +185,36 @@ def plot_roc_curve(y_true, y_pred, pos_label=None, verbose_label='',
         ax.plot([0, 1], [0, 1], color='darkgray', lw=2, linestyle='--')
     ax.legend(loc='lower right')
     return ax.get_figure()
+
+
+def plot_metrics(test_metric_names, scoring, model_name, ax_height=8,
+                 ax_width=8):
+    """Plots average metrics for gathered during model training."""
+    from itertools import chain
+    import math
+
+    n_metrics = len(test_metric_names)
+    hide_last_axis = n_metrics % 2 != 0
+    figsize = (ax_width * 2, ax_height * (n_metrics // 2))
+
+    fig, axes = plt.subplots(math.ceil(n_metrics / 2), 2, figsize=figsize)
+    fig.suptitle("Model '%s' scoring metrics" % model_name, fontsize=14)
+
+    try:
+        axes = list(chain(*axes))
+    except TypeError:
+        pass  # already has correct shape
+
+    epoches = [x + 1 for x in scoring.index.tolist()]
+    for name, ax in zip(test_metric_names, axes):
+        ax.plot(epoches, scoring[name], 'r-', label=name)
+        ax.plot(epoches, scoring['val_' + name], 'b-',
+                label='%s (validation)' % name)
+        ax.set_xlabel('# of epoch', fontsize=14)
+        ax.legend(loc='best')
+        ax.grid()
+
+    if hide_last_axis:
+        axes[-1].axis('off')
+
+    return fig
